@@ -123,12 +123,32 @@ def inject_styles() -> None:
     )
 
 
+def generate_demo_data() -> pd.DataFrame:
+    """Generate sample transaction data for demo mode."""
+    import random
+    locations = ["Delhi", "Mumbai", "Jaipur", "Bangalore", "Pune"]
+    records = []
+    for _ in range(150):
+        records.append({
+            "amount": random.randint(100, 50000),
+            "location": random.choice(locations),
+            "time": random.randint(1, 100000),
+            "status": "FRAUD" if random.random() < 0.26 else "NORMAL",
+            "processed_at": int(pd.Timestamp.now().timestamp()) - random.randint(0, 86400),
+        })
+    return pd.DataFrame(records)
+
+
 @st.cache_data(ttl=5)
 def load_data() -> pd.DataFrame:
-    response = requests.get("http://127.0.0.1:8000/transactions", timeout=4)
-    response.raise_for_status()
-    records = response.json()
-    return pd.DataFrame(records)
+    try:
+        response = requests.get("http://127.0.0.1:8000/transactions", timeout=4)
+        response.raise_for_status()
+        records = response.json()
+        return pd.DataFrame(records)
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, Exception):
+        st.info("📊 API unreachable. Showing demo data instead. Deploy with your backend running for live data.")
+        return generate_demo_data()
 
 
 def map_deterministic(value: str, choices: list[str]) -> str:
